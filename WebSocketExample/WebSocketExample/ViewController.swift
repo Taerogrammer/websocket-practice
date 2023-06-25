@@ -189,8 +189,40 @@ extension ViewController: URLSessionWebSocketDelegate {
                 switch message {
                 case .data(let data):
                     print("Got Data: \(data)")
+//                case .string(let message):
+//                    print("Got String: \(message)")
+//                    self?.messages.append(message)
+//                    DispatchQueue.main.async {
+//                        self?.tableView.reloadData()
+//                        let indexPath = IndexPath(row: (self?.messages.count ?? 0) - 1, section: 0)
+//                        self?.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+//                    }
+                    
                 case .string(let message):
                     print("Got String: \(message)")
+                    
+                    if let data = message.data(using: .utf8),
+                       let jsonData = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                       let dataArray = jsonData["data"] as? [[String: Any]] {
+                       
+                        for dataItem in dataArray {
+                            if let timeValue = dataItem["time"] as? TimeInterval,
+                               let textValue = dataItem["text"] as? String,
+                               let authorValue = dataItem["author"] as? String,
+                               let colorValue = dataItem["color"] as? String {
+                                
+                                let item = "\(timeValue), \(textValue), \(authorValue), \(colorValue)"
+                                self?.messages.append(item)
+                            }
+                        }
+                        
+                        DispatchQueue.main.async {
+                            self?.tableView.reloadData()
+                            let indexPath = IndexPath(row: (self?.messages.count ?? 0) - 1, section: 0)
+                            self?.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+                        }
+                    }
+                
                 @unknown default:
                     break
                 }
