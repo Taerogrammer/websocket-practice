@@ -9,6 +9,8 @@ import UIKit
 
 class ViewController: UIViewController, URLSessionWebSocketDelegate {
     
+    //MARK: - Components
+    
     private var webSocket: URLSessionWebSocketTask?
     
     private let sendButton: UIButton = {
@@ -39,8 +41,8 @@ class ViewController: UIViewController, URLSessionWebSocketDelegate {
         return textField
     }()
     
-    
     let tableView = UITableView()
+    
     var messages: [String] = []
     
     override func viewDidLoad() {
@@ -48,35 +50,42 @@ class ViewController: UIViewController, URLSessionWebSocketDelegate {
         
         view.backgroundColor = .systemBlue
         
-        let session = URLSession(
-            configuration: .default,
-            delegate: self,
-            delegateQueue: OperationQueue()
-        )
-//        let url = URL(string: "wss://s9309.blr1.piesocket.com/v3/1?api_key=cZGOksfuE6CqV1cZfly2CnFBqbE33D1UBzTWgUvd&notify_self=1")
-        let url = URL(string: "ws://localhost:1337/")
-        webSocket = session.webSocketTask(with: url!)
-        webSocket?.resume()
+        setWebSocketSession()
         
-        textField.frame = CGRect(x: 0, y: 0, width: 200, height: 30)
-        textField.center = CGPoint(x: view.center.x, y: closeButton.frame.maxY + textField.frame.height/2 + 100)
-        textField.translatesAutoresizingMaskIntoConstraints = false
+        setLayout()
+        
+        setTableView()
 
-        view.addSubview(textField)
+    }
+    
+}
+
+
+//MARK: - Table View Extension
+
+extension ViewController: UITableViewDataSource, UITableViewDelegate {
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return messages.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "CellIdentifier", for: indexPath)
         
-        closeButton.frame = CGRect(x: 0, y: 0, width: 200, height: 50)
-        view.addSubview(closeButton)
-        closeButton.addTarget(self, action: #selector(close), for: .touchUpInside)
-        closeButton.center = view.center
+        let message = messages[indexPath.row]
+        cell.textLabel?.text = message
         
-        sendButton.frame = CGRect(x: 0, y: 0, width: 200, height: 50)
-        sendButton.addTarget(self, action: #selector(send), for: .touchUpInside)
-        view.addSubview(sendButton)
-        sendButton.translatesAutoresizingMaskIntoConstraints = false
-        sendButton.center = CGPoint(x: closeButton.center.x, y: closeButton.frame.maxY + sendButton.frame.height/2 + 10)
-        
-        
-        
+        return cell
+    }
+    
+    
+}
+
+//MARK: - methods extension (레이아웃 관련)
+
+extension ViewController {
+    
+    private func setTableView() {
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CellIdentifier")
         tableView.frame = CGRect(x: 0, y: sendButton.frame.maxY + 10, width: view.bounds.width, height: view.bounds.height - sendButton.frame.maxY - 10)
         tableView.backgroundColor = .red
@@ -85,8 +94,56 @@ class ViewController: UIViewController, URLSessionWebSocketDelegate {
         // tableView의 설정 (예: delegate, dataSource, cell 등)
         view.addSubview(tableView)
         tableView.translatesAutoresizingMaskIntoConstraints = false
+    }
+    
+    private func setLayout() {
+        setTextField()
+        setCloseButton()
+        setSendButton()
+        
+    }
+    
+    private func setTextField() {
+        textField.frame = CGRect(x: 0, y: 0, width: 200, height: 30)
+        textField.center = CGPoint(x: view.center.x, y: closeButton.frame.maxY + textField.frame.height/2 + 100)
+        textField.translatesAutoresizingMaskIntoConstraints = false
 
+        view.addSubview(textField)
+    }
+    
+    private func setCloseButton() {
+        closeButton.frame = CGRect(x: 0, y: 0, width: 200, height: 50)
+        view.addSubview(closeButton)
+        closeButton.addTarget(self, action: #selector(close), for: .touchUpInside)
+        closeButton.center = view.center
+    }
+    
+    private func setSendButton() {
+        sendButton.frame = CGRect(x: 0, y: 0, width: 200, height: 50)
+        sendButton.addTarget(self, action: #selector(send), for: .touchUpInside)
+        view.addSubview(sendButton)
+        sendButton.translatesAutoresizingMaskIntoConstraints = false
+        sendButton.center = CGPoint(x: closeButton.center.x, y: closeButton.frame.maxY + sendButton.frame.height/2 + 10)
+    }
+    
+}
 
+//MARK: - websocket Extension
+
+extension ViewController {
+    
+    private func setWebSocketSession() {
+        let session = URLSession(
+            configuration: .default,
+            delegate: self,
+            delegateQueue: OperationQueue()
+        )
+        
+        //piesocket API
+//        let url = URL(string: "wss://s9309.blr1.piesocket.com/v3/1?api_key=cZGOksfuE6CqV1cZfly2CnFBqbE33D1UBzTWgUvd&notify_self=1")
+        let url = URL(string: "ws://localhost:1337/")
+        webSocket = session.webSocketTask(with: url!)
+        webSocket?.resume()
     }
     
     //ping을 통해 webSocket이 잘 연결되고 있는지 확인
@@ -152,23 +209,7 @@ class ViewController: UIViewController, URLSessionWebSocketDelegate {
     }
     
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        print("Did close connection with reason \((reason))")
+        print("Did close connection with reason \((reason)!)")
     }
     
-}
-
-
-extension ViewController: UITableViewDataSource, UITableViewDelegate {
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return messages.count
-    }
-    
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CellIdentifier", for: indexPath)
-        
-        let message = messages[indexPath.row]
-        cell.textLabel?.text = message
-        
-        return cell
-    }
 }
