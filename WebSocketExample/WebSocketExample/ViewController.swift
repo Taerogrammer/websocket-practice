@@ -7,11 +7,11 @@
 
 import UIKit
 
-class ViewController: UIViewController, URLSessionWebSocketDelegate {
+class ViewController: UIViewController {
     
     //MARK: - Components
     
-    private var webSocket: URLSessionWebSocketTask?
+    private var webSocket: URLSessionWebSocketTask?     //웹소켓 생성
     
     private let sendButton: UIButton = {
         let Sbutton = UIButton()
@@ -130,23 +130,25 @@ extension ViewController {
 
 //MARK: - websocket Extension
 
-extension ViewController {
+extension ViewController: URLSessionWebSocketDelegate {
     
+    
+    //Websocket은 연결되어 있어야하고 계속적으로 반응할 준비가 되어 있어야 함
     private func setWebSocketSession() {
         let session = URLSession(
             configuration: .default,
             delegate: self,
-            delegateQueue: OperationQueue()
+            delegateQueue: OperationQueue()  //.main큐에 넣어도 되지만, UI를 다루는 큐에 한 번에 넣지 않고 새로운 큐를 생성한 것
         )
         
         //piesocket API
 //        let url = URL(string: "wss://s9309.blr1.piesocket.com/v3/1?api_key=cZGOksfuE6CqV1cZfly2CnFBqbE33D1UBzTWgUvd&notify_self=1")
-        let url = URL(string: "ws://localhost:1337/")
+        let url = URL(string: "ws://localhost:1337/")   //웹소켓 url은 http나 https를 사용하지 않고, ws나 wss 사용
         webSocket = session.webSocketTask(with: url!)
         webSocket?.resume()
     }
     
-    //ping을 통해 webSocket이 잘 연결되고 있는지 확인
+    //ping을 통해 webSocket이 잘 연결되고 있는지 확인, 연결을 하려면 connection이 되어 있어야 하는데, 이를 확인함
     func ping() {
         webSocket?.sendPing { error in
             if let error = error {
@@ -155,12 +157,12 @@ extension ViewController {
         }
     }
     
-    //connection이 끝났을 때 대한 이유
     @objc func close() {
-        webSocket?.cancel(with: .goingAway, reason: "Demo ended".data(using: .utf8))
+        webSocket?.cancel(with: .goingAway, reason: "Demo ended".data(using: .utf8))    //connection이 끝났을 때 대한 이유
+
     }
     
-    //
+    //메세지 보내기
     @objc func send() {
 
         guard let newMessage = textField.text, !newMessage.isEmpty else { return }
@@ -179,7 +181,7 @@ extension ViewController {
         })
     }
     
-    
+    //지속적으로 이 receive 함수를 받기 때문에 계속해서 값을 받아야 함
     func receive() {
         webSocket?.receive(completionHandler: { [weak self] result in   //weak self : 메모리 누수 방지
             switch result {
@@ -201,6 +203,8 @@ extension ViewController {
         })
     }
 
+    
+    //URLSessionWebSocketDelegate - 웹소켓 open
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
         print("Did connect to socket")
         ping()
@@ -208,6 +212,7 @@ extension ViewController {
 //        send()
     }
     
+    //URLSessionWebSocketDelegate - 웹소켓 close
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
         print("Did close connection with reason \((reason)!)")
     }
