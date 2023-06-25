@@ -166,17 +166,10 @@ extension ViewController: URLSessionWebSocketDelegate {
     @objc func send() {
 
         guard let newMessage = textField.text, !newMessage.isEmpty else { return }
-        self.messages.append(newMessage)
 
         self.webSocket?.send(.string(newMessage), completionHandler: { error in
             if let error = error {
                 print("send error: \(error)")
-            } else {
-                DispatchQueue.main.async {
-                    self.tableView.reloadData()
-                    let indexPath = IndexPath(row: self.messages.count - 1, section: 0)
-                    self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
-                }
             }
         })
     }
@@ -189,39 +182,9 @@ extension ViewController: URLSessionWebSocketDelegate {
                 switch message {
                 case .data(let data):
                     print("Got Data: \(data)")
-//                case .string(let message):
-//                    print("Got String: \(message)")
-//                    self?.messages.append(message)
-//                    DispatchQueue.main.async {
-//                        self?.tableView.reloadData()
-//                        let indexPath = IndexPath(row: (self?.messages.count ?? 0) - 1, section: 0)
-//                        self?.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
-//                    }
-                    
                 case .string(let message):
                     print("Got String: \(message)")
-                    
-                    if let data = message.data(using: .utf8),
-                       let jsonData = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                       let dataArray = jsonData["data"] as? [[String: Any]] {
-                       
-                        for dataItem in dataArray {
-                            if let timeValue = dataItem["time"] as? TimeInterval,
-                               let textValue = dataItem["text"] as? String,
-                               let authorValue = dataItem["author"] as? String,
-                               let colorValue = dataItem["color"] as? String {
-                                
-                                let item = "\(timeValue), \(textValue), \(authorValue), \(colorValue)"
-                                self?.messages.append(item)
-                            }
-                        }
-                        
-                        DispatchQueue.main.async {
-                            self?.tableView.reloadData()
-                            let indexPath = IndexPath(row: (self?.messages.count ?? 0) - 1, section: 0)
-                            self?.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
-                        }
-                    }
+                    self?.handleReceivedMessage(message)
                 
                 @unknown default:
                     break
@@ -235,6 +198,53 @@ extension ViewController: URLSessionWebSocketDelegate {
         })
     }
 
+    private func handleReceivedMessage(_ message: String) {
+        print("handleMessage called()")
+        if let data = message.data(using: .utf8),
+           let jsonData = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+           let dataArray = jsonData["data"] as? [[String: Any]] {
+           print("--------------------------")
+            for dataItem in dataArray {
+                if let timeValue = dataItem["time"] as? TimeInterval,
+                   let textValue = dataItem["text"] as? String,
+                   let authorValue = dataItem["author"] as? String,
+                   let colorValue = dataItem["color"] as? String {
+                    
+                    let item = "\(timeValue), \(textValue), \(authorValue), \(colorValue)"
+                    print("item -> \(item)")
+                    self.messages.append(item)
+                }
+            }
+            handleReceivedMessageCallback()
+        } else {
+            print("else문")
+            if let data = message.data(using: .utf8),
+               let jsonData = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+               let dataObject = jsonData["data"] as? [String: Any] {
+                
+                if let timeValue = dataObject["time"] as? TimeInterval,
+                   let textValue = dataObject["text"] as? String,
+                   let authorValue = dataObject["author"] as? String,
+                   let colorValue = dataObject["color"] as? String {
+                    
+                    let item = "\(timeValue), \(textValue), \(authorValue), \(colorValue)"
+                    print("item -> \(item)")
+                    self.messages.append(item)
+                    handleReceivedMessageCallback()
+                }
+            }
+        }
+    }
+    
+    // 메시지를 받았을 때 호출되는 콜백 메서드
+    private func handleReceivedMessageCallback() {
+        print("callBack called()")
+        DispatchQueue.main.async { [weak self] in
+            self?.tableView.reloadData()
+            let indexPath = IndexPath(row: (self?.messages.count ?? 0) - 1, section: 0)
+            self?.tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+        }
+    }
     
     //URLSessionWebSocketDelegate - 웹소켓 open
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
